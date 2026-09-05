@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Housie</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700;9..144,900&family=Kalam:wght@400;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-deep:#1a0f38;
+    --bg-deep2:#31135e;
+    --gold:#d9ad3f;
+    --gold-light:#f6dd8c;
+    --chalk:#f4efe2;
+    --board-green:#1f4a35;
+    --board-green-dark:#163726;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0;
+    height:100%;
+    background:
+      radial-gradient(ellipse at 20% -10%, #4a1c85 0%, transparent 55%),
+      radial-gradient(ellipse at 85% 0%, #5a2091 0%, transparent 45%),
+      linear-gradient(180deg, var(--bg-deep) 0%, #150a2c 60%, #0e0620 100%);
+    min-height:100vh;
+    font-family:'Inter', sans-serif;
+    color:var(--chalk);
+    overflow-x:hidden;
+  }
+  .font-display{ font-family:'Fraunces', serif; }
+  .font-chalk{ font-family:'Kalam', cursive; }
+
+  /* subtle chalk-dust texture */
+  .dust-layer{
+    position:fixed; inset:0; pointer-events:none; z-index:0; opacity:.35;
+    background-image: radial-gradient(1px 1px at 10% 20%, rgba(255,255,255,.5) 0, transparent 100%),
+      radial-gradient(1px 1px at 80% 60%, rgba(255,255,255,.4) 0, transparent 100%),
+      radial-gradient(1.5px 1.5px at 40% 80%, rgba(255,255,255,.3) 0, transparent 100%),
+      radial-gradient(1px 1px at 60% 30%, rgba(255,255,255,.4) 0, transparent 100%),
+      radial-gradient(1px 1px at 25% 55%, rgba(255,255,255,.3) 0, transparent 100%);
+    background-size: 400px 400px;
+  }
+
+  /* ===== Blackboard call board ===== */
+  .blackboard{
+    background:
+      linear-gradient(180deg, rgba(255,255,255,.03), rgba(0,0,0,.15)),
+      radial-gradient(ellipse at 30% 20%, #2c5c42 0%, var(--board-green) 55%, var(--board-green-dark) 100%);
+    border:10px solid #6b4a2b;
+    border-image: linear-gradient(155deg,#8a5f37,#5c3d1f 40%,#3a2712 60%,#7a5230) 1;
+    box-shadow: 0 20px 40px -12px rgba(0,0,0,.6), inset 0 0 60px rgba(0,0,0,.4);
+    border-radius:6px;
+  }
+  .board-cell{
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Kalam',cursive;
+    font-weight:700;
+    border-radius:5px;
+    border:1px dashed rgba(244,239,226,.18);
+    color:rgba(244,239,226,.28);
+    transition: all .25s ease;
+    font-size: clamp(9px, 2vh, 19px);
+    min-height:0; min-width:0;
+  }
+  .board-cell.called{
+    color:#1f130a;
+    background: radial-gradient(circle at 35% 30%, var(--gold-light), var(--gold) 65%, #a97c1f 100%);
+    border-color: var(--gold-light);
+    box-shadow: 0 0 14px rgba(217,173,63,.7), inset 0 -3px 6px rgba(0,0,0,.25);
+    transform: scale(1.06) rotate(-1.5deg);
+    animation: chalkPop .5s ease;
+  }
+  @keyframes chalkPop{
+    0%{ transform: scale(.3) rotate(0deg); opacity:0; filter: blur(2px);}
+    60%{ transform: scale(1.15) rotate(-2deg); opacity:1;}
+    100%{ transform: scale(1.06) rotate(-1.5deg);}
+  }
+
+  /* ===== Table ===== */
+  .wood-table{
+    background: repeating-linear-gradient(90deg, #6b4326 0 40px, #5a3820 40px 42px),
+      linear-gradient(180deg, #7a4e2c, #4a2c15);
+    box-shadow: 0 -6px 0 rgba(0,0,0,.25) inset, 0 25px 40px rgba(0,0,0,.55);
+    border-top: 3px solid #8a5c33;
+  }
+
+  /* ===== Glass bowls ===== */
+  .bowl-wrap{ position:relative; width: min(46vw, 340px); }
+  .bowl-wrap .bowl-title{ position:absolute; top:-96px; left:50%; transform:translateX(-50%); text-align:center; z-index:6; }
+  .bowl-wrap .bowl-title h1{ margin:0; }
+  .bowl-rim{
+    height:22px;
+    border-radius:50%;
+    background: linear-gradient(180deg, var(--gold-light), var(--gold) 55%, #9a7020);
+    box-shadow: 0 4px 10px rgba(0,0,0,.35), inset 0 -3px 4px rgba(0,0,0,.25);
+    position:relative; z-index:3;
+    transition: transform .25s ease, box-shadow .25s ease;
+  }
+  .bowl-rim.glow{
+    transform: translateY(-3px) scaleX(1.02);
+    box-shadow: 0 8px 30px rgba(217,173,63,.45), inset 0 -4px 6px rgba(255,240,200,.25);
+    animation: rimPulse 1s ease-in-out infinite;
+  }
+  @keyframes rimPulse{
+    0%{ box-shadow: 0 6px 18px rgba(217,173,63,.25), inset 0 -3px 5px rgba(255,240,200,.18); }
+    50%{ box-shadow: 0 10px 36px rgba(217,173,63,.5), inset 0 -4px 6px rgba(255,240,200,.28); }
+    100%{ box-shadow: 0 6px 18px rgba(217,173,63,.25), inset 0 -3px 5px rgba(255,240,200,.18); }
+  }
+  .bowl-body{
+    position:relative;
+    margin-top:-10px;
+    height: min(38vw, 260px);
+    border-radius: 0 0 46% 46% / 0 0 60% 60%;
+    background:
+      linear-gradient(115deg, rgba(255,255,255,.35) 0%, rgba(255,255,255,.05) 18%, rgba(180,150,255,.12) 45%, rgba(255,255,255,.08) 70%, rgba(255,255,255,.28) 100%),
+      linear-gradient(180deg, rgba(200,190,255,.18), rgba(120,90,200,.12) 60%, rgba(60,30,110,.15));
+    backdrop-filter: blur(6px);
+    border: 1px solid rgba(255,255,255,.35);
+    border-top: none;
+    box-shadow:
+      inset -18px -10px 30px rgba(255,255,255,.15),
+      inset 18px 20px 40px rgba(30,10,60,.35),
+      0 25px 35px -10px rgba(0,0,0,.55);
+    overflow:hidden;
+    z-index:2;
+    transition: transform .1s;
+  }
+  .bowl-body.shaking{ animation: bowlShake .35s ease-in-out infinite; }
+  .bowl-rim.shaking{ animation: bowlShake .35s ease-in-out infinite; }
+  @keyframes bowlShake{
+    0%,100%{ transform: rotate(0deg) translateX(0); }
+    25%{ transform: rotate(-2.5deg) translateX(-4px); }
+    75%{ transform: rotate(2.5deg) translateX(4px); }
+  }
+  .bowl-shine{
+    position:absolute; top:8%; left:8%; width:22%; height:60%;
+    background: linear-gradient(180deg, rgba(255,255,255,.55), transparent);
+    border-radius:50%;
+    filter: blur(2px);
+    pointer-events:none;
+  }
+  .balls-holder{
+    position:absolute; inset:14% 8% 4% 8%;
+    display:flex; flex-wrap:wrap-reverse; align-content:flex-start; justify-content:center;
+    gap:3px; overflow:hidden;
+  }
+  .ball{
+    width: clamp(22px, 4vw, 34px);
+    height: clamp(22px, 4vw, 34px);
+    border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Kalam',cursive; font-weight:700;
+    font-size: clamp(9px, 1.6vw, 13px);
+    color:#3a2410;
+    background: radial-gradient(circle at 32% 28%, #fff6de, var(--gold) 60%, #a97c1f 100%);
+    box-shadow: 0 2px 4px rgba(0,0,0,.35), inset 0 -2px 3px rgba(0,0,0,.2);
+    transition: transform .15s;
+    flex-shrink:0;
+    animation: floaty 2.6s ease-in-out infinite alternate;
+  }
+  @keyframes floaty{
+    0%{ transform: translateY(0); }
+    100%{ transform: translateY(-4px); }
+  }
+  /* while jumbling, pause floaty animation so transforms applied via JS are visible */
+  .ball.jumble{ animation: none !important; transition: transform .08s ease, box-shadow .08s ease; z-index:2; }
+  .ball.launching{
+    animation: launch .7s cubic-bezier(.3,.8,.4,1) forwards;
+    z-index: 50;
+  }
+  @keyframes launch{
+    0%{ transform: translateY(0) scale(1) rotate(0deg); opacity:1;}
+    35%{ transform: translateY(-140px) scale(1.3) rotate(180deg); opacity:1;}
+    100%{ transform: translateY(-340px) scale(.4) rotate(400deg); opacity:0;}
+  }
+
+  /* ===== Overlay ===== */
+  .overlay-number{
+    font-family:'Fraunces', serif;
+    font-weight:900;
+    font-size: clamp(6rem, 26vw, 15rem);
+    line-height: 1;
+    background: linear-gradient(180deg, var(--gold-light), var(--gold) 60%, #b6852a);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    filter: drop-shadow(0 10px 30px rgba(217,173,63,.55));
+    animation: numberIn .5s cubic-bezier(.2,1.4,.4,1);
+  }
+  @keyframes numberIn{
+    0%{ transform: scale(.2) rotate(-15deg); opacity:0;}
+    70%{ transform: scale(1.15) rotate(4deg); opacity:1;}
+    100%{ transform: scale(1) rotate(0deg);}
+  }
+  .overlay-number.settle{ animation: numberSettle .35s ease; }
+  @keyframes numberSettle{
+    0%{ transform: scale(1.28); }
+    60%{ transform: scale(.93);}
+    100%{ transform: scale(1);}
+  }
+
+  .btn-gold{
+    background: linear-gradient(180deg, var(--gold-light), var(--gold) 70%, #a97c1f);
+    color:#2a1a06;
+    box-shadow: 0 8px 18px -4px rgba(217,173,63,.55), inset 0 -3px 4px rgba(0,0,0,.2);
+  }
+  .btn-gold:active{ transform: translateY(2px); }
+  .btn-gold:disabled{ opacity:.45; filter:grayscale(.3); cursor:not-allowed;}
+  .btn-gold.pressed{ transform: scale(.96); box-shadow: 0 6px 12px -6px rgba(217,173,63,.35), inset 0 -2px 3px rgba(0,0,0,.15); }
+
+  /* attention-grab: spotlight and pop */
+  .focus-overlay{ position:fixed; inset:0; pointer-events:none; z-index:96; display:none;
+    /* lighter spotlight so content remains clear */
+    background: radial-gradient(circle at 50% 38%, rgba(255,255,255,0.06) 0%, rgba(0,0,0,.35) 40%, rgba(0,0,0,.6) 100%);
+  }
+  .focus-overlay.show{ display:block; animation: focusFade .45s ease both; }
+  @keyframes focusFade{ from{ opacity:0; } to{ opacity:1; } }
+
+  .bowl-body.pop{ animation: bowlPop .45s cubic-bezier(.2,.9,.25,1); }
+  @keyframes bowlPop{
+    0%{ transform: translateY(0) scale(1); }
+    30%{ transform: translateY(-6px) scale(1.03); }
+    100%{ transform: translateY(0) scale(1); }
+  }
+
+  /* screen shake removed per user preference */
+
+  .glass-panel{
+    background: linear-gradient(160deg, rgba(255,255,255,.09), rgba(255,255,255,.02));
+    border:1px solid rgba(255,255,255,.14);
+    backdrop-filter: blur(14px);
+  }
+
+  .leaderboard-input{
+    background: rgba(0,0,0,.3);
+    border:1px solid rgba(255,255,255,.2);
+    border-radius:8px;
+    padding:6px 10px;
+    font-family:'Kalam',cursive;
+    color:var(--chalk);
+    font-size: clamp(12px,1.6vh,15px);
+    width: clamp(88px,10vw,150px);
+    outline:none;
+  }
+  .leaderboard-input:focus{ border-color: var(--gold); }
+  .leaderboard-input::placeholder{ color: rgba(244,239,226,.4); }
+
+  ::-webkit-scrollbar{ width:8px; }
+  ::-webkit-scrollbar-thumb{ background: var(--gold); border-radius:8px; }
+
+  #confetti-canvas{ position:fixed; inset:0; pointer-events:none; z-index:70; }
+</style>
+</head>
+<body class="relative">
+<div class="dust-layer"></div>
+<canvas id="confetti-canvas"></canvas>
+<div id="focusOverlay" class="focus-overlay"></div>
+
+<!-- ================= SETUP MODAL ================= -->
+<div id="setupModal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
+  <div class="glass-panel rounded-2xl p-8 max-w-md w-full text-center relative overflow-hidden">
+    <div class="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-[radial-gradient(circle,rgba(217,173,63,.35),transparent_70%)]"></div>
+    <p class="font-chalk text-[var(--gold-light)] tracking-widest text-sm mb-1">HAPPY TEACHER'S DAY</p>
+    <h1 class="font-display text-4xl font-bold mb-2">Housie Setup</h1>
+    <p class="text-white/60 text-sm mb-6">Choose how many numbers are in play. They'll be placed in the bowl.</p>
+
+    <div class="grid grid-cols-4 gap-2 mb-4" id="presetBtns">
+      <button data-n="30" class="preset-btn py-2 rounded-lg border border-white/20 hover:border-[var(--gold)] hover:bg-white/5 transition font-semibold">30</button>
+      <button data-n="50" class="preset-btn py-2 rounded-lg border border-white/20 hover:border-[var(--gold)] hover:bg-white/5 transition font-semibold">50</button>
+      <button data-n="90" class="preset-btn py-2 rounded-lg border-2 border-[var(--gold)] bg-white/5 transition font-semibold">90</button>
+      <button data-n="100" class="preset-btn py-2 rounded-lg border border-white/20 hover:border-[var(--gold)] hover:bg-white/5 transition font-semibold">100</button>
+    </div>
+
+    <div class="flex items-center gap-2 mb-6">
+      <input id="customN" type="number" min="4" max="200" step="2" placeholder="Custom total (even number)" class="flex-1 rounded-lg bg-black/30 border border-white/20 px-3 py-2 text-sm focus:outline-none focus:border-[var(--gold)]">
+      <button id="useCustom" class="px-3 py-2 rounded-lg border border-white/20 hover:border-[var(--gold)] text-sm">Use</button>
+    </div>
+
+    <button id="startGameBtn" class="btn-gold font-display font-bold text-lg w-full py-3 rounded-xl">Start Game</button>
+    <p class="text-xs text-white/40 mt-3">Selected total: <span id="selectedTotalLabel" class="text-[var(--gold-light)] font-semibold">90</span></p>
+  </div>
+</div>
+
+<!-- ================= DRAW OVERLAY ================= -->
+<div id="drawOverlay" class="fixed inset-0 z-[90] hidden items-center justify-center bg-black/80 backdrop-blur-md">
+  <div class="text-center">
+    <p id="overlayPhrase" class="font-chalk text-2xl text-[var(--gold-light)] mb-2 tracking-wide">And the number is…</p>
+    <div id="overlayNumber" class="overlay-number">7</div>
+  </div>
+</div>
+
+<!-- ================= CONGRATULATIONS MODAL ================= -->
+<div id="congratsModal" class="fixed inset-0 z-[95] hidden items-center justify-center bg-black/85 backdrop-blur-md px-4">
+  <div class="glass-panel rounded-2xl p-8 max-w-lg w-full text-center relative overflow-hidden">
+    <div class="absolute -top-10 -left-10 w-40 h-40 rounded-full bg-[radial-gradient(circle,rgba(217,173,63,.35),transparent_70%)]"></div>
+    <p class="font-chalk text-[var(--gold-light)] text-2xl md:text-3xl mb-1">🎉 Congratulations! 🎉</p>
+    <h2 class="font-display text-2xl md:text-4xl font-bold mb-5">Our Lucky Winners</h2>
+    <div id="congratsList" class="mb-6"></div>
+    <p class="text-white/50 text-sm mb-5">Thank you for playing — Happy Teacher's Day!</p>
+    <button id="closeCongratsBtn" class="btn-gold font-display font-bold px-6 py-2 rounded-xl">Close</button>
+  </div>
+</div>
+
+<!-- ================= MAIN APP ================= -->
+<div id="app" class="hidden relative z-10 w-full mx-auto px-3 md:px-6 py-2 md:py-3" style="min-height:100vh; max-width:1400px; display:flex; flex-direction:column;">
+
+  <header class="text-center shrink-0 mb-1 md:mb-2">
+    <p class="font-chalk text-[var(--gold-light)] tracking-[0.25em] text-[12px] md:text-sm mb-0.5">✿ HAPPY TEACHER'S DAY ✿</p>
+    <p class="text-white/50 text-sm mt-1">A little celebration for the ones who taught us everything.</p>
+    <!-- title moved to bowl area per user request -->
+  </header>
+
+  <div class="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-[1.2fr_1fr] gap-3 md:gap-5" style="grid-template-rows: minmax(0,1fr);">
+    <!-- Blackboard call board -->
+    <div class="blackboard p-2 md:p-4 flex flex-col min-h-0">
+      <div class="flex items-center justify-between mb-1.5 shrink-0">
+        <h2 class="font-chalk text-sm md:text-lg text-[var(--chalk)]">Called Numbers</h2>
+        <span class="font-chalk text-xs md:text-sm text-[var(--gold-light)]"><span id="calledCount">0</span> / <span id="totalCount">90</span></span>
+      </div>
+      <div id="numberBoard" class="grid gap-1 flex-1 min-h-0"></div>
+    </div>
+
+    <!-- Bowls stage + controls -->
+    <div class="flex flex-col min-h-0 items-center justify-between">
+      <div class="flex items-end justify-center gap-4 md:gap-8 w-full flex-1 min-h-0">
+          <div class="bowl-wrap mx-auto">
+            <div class="bowl-title">
+              <h1 class="font-display text-3xl md:text-4xl font-black tracking-wide">
+                <span class="text-[var(--gold-light)] drop-shadow-[0_0_18px_rgba(217,173,63,.7)]">Housie</span>
+              </h1>
+            
+            </div>
+          <p class="text-center font-chalk text-[var(--gold-light)] mb-1 text-[11px] md:text-sm" id="leftLabel">Bowl · 1–90</p>
+          <div class="bowl-rim"></div>
+          <div class="bowl-body">
+            <div class="bowl-shine"></div>
+            <div class="balls-holder" id="leftBowl"></div>
+          </div>
+        </div>
+      </div>
+      <div class="wood-table w-full max-w-md h-6 md:h-9 -mt-2 rounded-b-xl shrink-0"></div>
+
+      <div class="flex flex-col items-center gap-1.5 md:gap-2 mt-2 shrink-0">
+        <button id="playBtn" class="btn-gold font-display font-bold text-base md:text-xl px-6 md:px-8 py-2.5 md:py-3 rounded-2xl">🔔 Draw Next Number</button>
+        <div id="lastNumberStrip" class="text-white/60 text-xs md:text-sm font-chalk"></div>
+        <button id="resetBtn" class="text-white/40 hover:text-[var(--gold-light)] text-[10px] md:text-xs underline">Reset &amp; start a new game</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="winnerBanner" class="hidden text-center mt-2 glass-panel rounded-xl py-2 px-4 shrink-0">
+    <p class="font-chalk text-[var(--gold-light)] text-sm md:text-lg">🎉 Full House! Every number has been called 🎉</p>
+  </div>
+
+  <!-- Leaderboard -->
+  <div class="glass-panel rounded-xl px-3 py-2 md:px-4 md:py-2.5 mt-2 shrink-0 flex flex-wrap items-center justify-center gap-2 md:gap-4">
+    <div class="flex items-center gap-1.5">
+      <span class="text-lg md:text-xl">🥇</span>
+      <input id="firstPlaceInput" type="text" placeholder="1st place" class="leaderboard-input">
+    </div>
+    <div class="flex items-center gap-1.5">
+      <span class="text-lg md:text-xl">🥈</span>
+      <input id="secondPlaceInput" type="text" placeholder="2nd place" class="leaderboard-input">
+    </div>
+    <div class="flex items-center gap-1.5">
+      <span class="text-lg md:text-xl">🥉</span>
+      <input id="thirdPlaceInput" type="text" placeholder="3rd place" class="leaderboard-input">
+    </div>
+    <button id="announceWinnersBtn" class="btn-gold font-chalk font-bold text-xs md:text-sm px-3 md:px-4 py-2 rounded-lg">🎉 Announce Winners</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  // ---------- Audio (Web Audio API, no external files) ----------
+  let actx = null;
+  function ctx(){ if(!actx){ actx = new (window.AudioContext || window.webkitAudioContext)(); } return actx; }
+
+  function tone(freq, start, dur, type='sine', gain=0.18){
+    const c = ctx();
+    const osc = c.createOscillator();
+    const g = c.createGain();
+    osc.type = type; osc.frequency.value = freq;
+    osc.connect(g); g.connect(c.destination);
+    const t0 = c.currentTime + start;
+    g.gain.setValueAtTime(0, t0);
+    g.gain.linearRampToValueAtTime(gain, t0 + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+    osc.start(t0); osc.stop(t0 + dur + 0.02);
+  }
+
+  function playDrawSound(){
+    tone(880, 0, 0.18, 'triangle', 0.2);
+    tone(1320, 0.06, 0.22, 'triangle', 0.14);
+  }
+  function playRollSound(long){
+    const ticks = long ? 11 : 5;
+    const gap = long ? 0.2 : 0.16;
+    for(let i=0;i<ticks;i++){
+      tone(280 + i*14, i*gap, 0.11, 'square', 0.045);
+    }
+  }
+  function playFanfare(){
+    const notes = [523.25,659.25,783.99,1046.5,783.99,1046.5,1318.5];
+    notes.forEach((f,i)=> tone(f, i*0.14, 0.35, 'sawtooth', 0.13));
+  }
+
+  // ---------- Confetti / fireworks ----------
+  const canvas = document.getElementById('confetti-canvas');
+  const cctx = canvas.getContext('2d');
+  function resizeCanvas(){ canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+  resizeCanvas(); window.addEventListener('resize', resizeCanvas);
+  let particles = [];
+  const COLORS = ['#d9ad3f','#f6dd8c','#f4efe2','#8a4fd6','#c084fc'];
+  function burstConfetti(count){
+    for(let i=0;i<count;i++){
+      particles.push({
+        x: canvas.width/2 + (Math.random()-0.5)*canvas.width*0.6,
+        y: -20 - Math.random()*100,
+        vx: (Math.random()-0.5)*4,
+        vy: 2 + Math.random()*4,
+        size: 4 + Math.random()*6,
+        color: COLORS[Math.floor(Math.random()*COLORS.length)],
+        rot: Math.random()*360,
+        vrot: (Math.random()-0.5)*10,
+        life: 0,
+        maxLife: 140 + Math.random()*60,
+        gravity: 0.04
+      });
+    }
+  }
+  function fireworkBurst(x, y, count){
+    for(let i=0;i<count;i++){
+      const angle = (Math.PI*2*i)/count + Math.random()*0.25;
+      const speed = 2 + Math.random()*4.5;
+      particles.push({
+        x, y,
+        vx: Math.cos(angle)*speed,
+        vy: Math.sin(angle)*speed,
+        size: 3 + Math.random()*4,
+        color: COLORS[Math.floor(Math.random()*COLORS.length)],
+        rot: Math.random()*360,
+        vrot: (Math.random()-0.5)*10,
+        life: 0,
+        maxLife: 65 + Math.random()*45,
+        gravity: 0.07
+      });
+    }
+  }
+  function animateConfetti(){
+    cctx.clearRect(0,0,canvas.width,canvas.height);
+    particles.forEach(p=>{
+      p.x += p.vx; p.y += p.vy; p.vy += p.gravity; p.rot += p.vrot; p.life++;
+      cctx.save();
+      cctx.translate(p.x,p.y);
+      cctx.rotate(p.rot*Math.PI/180);
+      cctx.fillStyle = p.color;
+      cctx.globalAlpha = Math.max(0, 1 - p.life/p.maxLife);
+      cctx.fillRect(-p.size/2,-p.size/4,p.size,p.size/2);
+      cctx.restore();
+    });
+    particles = particles.filter(p=> p.life < p.maxLife && p.y < canvas.height + 50);
+    requestAnimationFrame(animateConfetti);
+  }
+  animateConfetti();
+
+  // ---------- Game State ----------
+  let TOTAL = 90;
+  let HALF = 45;
+  let remaining = [];
+  let calledSet = new Set();
+  let drawing = false;
+  let jumbleInterval = null;
+
+  const ANTICIPATION_NORMAL = 900;   // ms bowl "shake" before a normal draw
+  const ANTICIPATION_LAST10 = ANTICIPATION_NORMAL;
+  const LUCKY_PHRASES = [
+    "And the number is…", "Here it comes…", "Calling out…", "Announcing…",
+    "Eyes on the board…", "Number coming up…", "Let's see it…", "Ready or not…"
+  ];
+
+  const setupModal = document.getElementById('setupModal');
+  const app = document.getElementById('app');
+  const presetBtns = document.querySelectorAll('.preset-btn');
+  const customN = document.getElementById('customN');
+  const useCustom = document.getElementById('useCustom');
+  const selectedTotalLabel = document.getElementById('selectedTotalLabel');
+  const startGameBtn = document.getElementById('startGameBtn');
+
+  const leftBowl = document.getElementById('leftBowl');
+  const leftBowlBody = leftBowl.parentElement;
+  const leftRim = leftBowlBody.previousElementSibling;
+  const focusOverlay = document.getElementById('focusOverlay');
+  const leftLabel = document.getElementById('leftLabel');
+  const numberBoard = document.getElementById('numberBoard');
+  const calledCountEl = document.getElementById('calledCount');
+  const totalCountEl = document.getElementById('totalCount');
+  const playBtn = document.getElementById('playBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const lastNumberStrip = document.getElementById('lastNumberStrip');
+  const winnerBanner = document.getElementById('winnerBanner');
+
+  const drawOverlay = document.getElementById('drawOverlay');
+  const overlayNumber = document.getElementById('overlayNumber');
+  const overlayPhrase = document.getElementById('overlayPhrase');
+
+  const firstPlaceInput = document.getElementById('firstPlaceInput');
+  const secondPlaceInput = document.getElementById('secondPlaceInput');
+  const thirdPlaceInput = document.getElementById('thirdPlaceInput');
+  const announceWinnersBtn = document.getElementById('announceWinnersBtn');
+  const congratsModal = document.getElementById('congratsModal');
+  const congratsList = document.getElementById('congratsList');
+  const closeCongratsBtn = document.getElementById('closeCongratsBtn');
+
+  let selectedTotal = 90;
+  presetBtns.forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      presetBtns.forEach(b=> b.classList.remove('border-2','border-[var(--gold)]','bg-white/5'));
+      presetBtns.forEach(b=> b.classList.add('border','border-white/20'));
+      btn.classList.remove('border','border-white/20');
+      btn.classList.add('border-2','border-[var(--gold)]','bg-white/5');
+      selectedTotal = parseInt(btn.dataset.n,10);
+      selectedTotalLabel.textContent = selectedTotal;
+      customN.value = '';
+    });
+  });
+  useCustom.addEventListener('click', ()=>{
+    let v = parseInt(customN.value,10);
+    if(!v || v < 4){ customN.focus(); return; }
+    if(v % 2 !== 0) v += 1; // keep it even for a clean split
+    selectedTotal = v;
+    selectedTotalLabel.textContent = selectedTotal;
+    presetBtns.forEach(b=>{ b.classList.remove('border-2','border-[var(--gold)]','bg-white/5'); b.classList.add('border','border-white/20'); });
+  });
+
+  startGameBtn.addEventListener('click', ()=>{
+    ctx(); // unlock audio on user gesture
+    TOTAL = selectedTotal;
+    HALF = TOTAL; // single bowl: all numbers go into the left bowl
+    initGame();
+    setupModal.classList.add('hidden');
+    app.classList.remove('hidden');
+  });
+
+  resetBtn.addEventListener('click', ()=>{
+    setupModal.classList.remove('hidden');
+    app.classList.add('hidden');
+    winnerBanner.classList.add('hidden');
+    playBtn.disabled = false;
+    firstPlaceInput.value = '';
+    secondPlaceInput.value = '';
+    thirdPlaceInput.value = '';
+    congratsModal.classList.add('hidden');
+    congratsModal.classList.remove('flex');
+  });
+
+  function initGame(){
+    remaining = []; calledSet = new Set(); drawing = false;
+    for(let i=1;i<=TOTAL;i++) remaining.push(i);
+
+    leftLabel.textContent = `Bowl · 1–${TOTAL}`;
+    totalCountEl.textContent = TOTAL;
+    calledCountEl.textContent = 0;
+    lastNumberStrip.textContent = '';
+    winnerBanner.classList.add('hidden');
+    playBtn.disabled = false;
+    playBtn.textContent = '🔔 Draw Next Number';
+
+    leftBowl.innerHTML = '';
+    for(let n=1;n<=TOTAL;n++){
+      const ball = document.createElement('div');
+      ball.className = 'ball';
+      ball.textContent = n;
+      ball.id = 'ball-' + n;
+      ball.style.animationDelay = (Math.random()*2.4).toFixed(2) + 's';
+      leftBowl.appendChild(ball);
+    }
+
+    const rows = Math.ceil(TOTAL/10);
+    numberBoard.innerHTML = '';
+    numberBoard.style.gridTemplateColumns = `repeat(10, minmax(0,1fr))`;
+    numberBoard.style.gridTemplateRows = `repeat(${rows}, minmax(0,1fr))`;
+    for(let n=1;n<=TOTAL;n++){
+      const cell = document.createElement('div');
+      cell.className = 'board-cell';
+      cell.id = 'cell-' + n;
+      cell.textContent = n;
+      numberBoard.appendChild(cell);
+    }
+  }
+
+  playBtn.addEventListener('click', drawNumber);
+
+  function drawNumber(){
+    if(drawing || remaining.length === 0) return;
+    drawing = true;
+    playBtn.disabled = true;
+
+    const isFinalStretch = remaining.length <= 10;
+    const idx = Math.floor(Math.random() * remaining.length);
+    const num = remaining.splice(idx,1)[0];
+
+    // anticipation: bowl "shake" as if being tumbled
+    leftRim.classList.add('glow');
+    playBtn.classList.add('pressed');
+    leftBowlBody.classList.add('shaking');
+    leftBowlBody.classList.add('pop');
+    if(focusOverlay) focusOverlay.classList.add('show');
+    playRollSound(isFinalStretch);
+
+    // start jumbling the balls visually inside the bowl
+    if(jumbleInterval) clearInterval(jumbleInterval);
+    // add class to pause floaty animation so transforms are visible
+    const _balls = leftBowl.querySelectorAll('.ball');
+    _balls.forEach(b => b.classList.add('jumble'));
+    jumbleInterval = setInterval(()=>{
+      const balls = leftBowl.querySelectorAll('.ball');
+      balls.forEach(b => {
+        // stronger random nudge, rotation and occasional pop scale
+        const rx = (Math.random() - 0.5) * 36; // px
+        const ry = (Math.random() - 0.5) * 24; // px
+        const r = (Math.random() - 0.5) * 120; // deg
+        const s = 0.92 + Math.random() * 0.26;
+        b.style.transform = `translate(${rx}px, ${ry}px) rotate(${r}deg) scale(${s})`;
+        // bring a few balls to front occasionally for visibility
+        if(Math.random() > 0.88) b.style.zIndex = '60'; else b.style.zIndex = '';
+      });
+    }, 70);
+
+    const anticipation = isFinalStretch ? ANTICIPATION_LAST10 : ANTICIPATION_NORMAL;
+
+    setTimeout(()=>{
+      leftBowlBody.classList.remove('shaking');
+
+      // stop jumbling and reset transforms before the launch
+      if(jumbleInterval){ clearInterval(jumbleInterval); jumbleInterval = null; }
+      const balls = leftBowl.querySelectorAll('.ball');
+      balls.forEach(b => { b.style.transform = ''; b.style.zIndex = ''; b.classList.remove('jumble'); });
+
+      const ball = document.getElementById('ball-' + num);
+      playDrawSound();
+      if(ball){ ball.classList.add('launching'); }
+
+      setTimeout(()=>{
+        if(ball) ball.remove();
+        // remove transient animations
+        leftRim.classList.remove('glow');
+        playBtn.classList.remove('pressed');
+        leftBowlBody.classList.remove('pop');
+        if(focusOverlay) focusOverlay.classList.remove('show');
+        showOverlay(num, isFinalStretch);
+      }, 550);
+    }, anticipation);
+  }
+
+  function randomPhrase(){
+    return LUCKY_PHRASES[Math.floor(Math.random()*LUCKY_PHRASES.length)];
+  }
+
+  function showOverlay(num, isFinalStretch){
+    overlayPhrase.textContent = randomPhrase();
+    drawOverlay.classList.remove('hidden');
+    drawOverlay.classList.add('flex');
+
+    overlayNumber.textContent = num;
+    burstConfetti(70);
+
+    const holdTime = 1700;
+    setTimeout(()=>{
+      drawOverlay.classList.add('hidden');
+      drawOverlay.classList.remove('flex');
+      // clear any transient confetti for regular draws to avoid lingering blur
+      if(!isFinalStretch){ particles = []; cctx.clearRect(0,0,canvas.width,canvas.height); }
+      revealOnBoard(num);
+    }, holdTime);
+  }
+
+  function revealOnBoard(num){
+    calledSet.add(num);
+    const cell = document.getElementById('cell-' + num);
+    if(cell) cell.classList.add('called');
+    calledCountEl.textContent = calledSet.size;
+    lastNumberStrip.textContent = `Last called: ${num}`;
+    drawing = false;
+
+    if(remaining.length === 0){
+      playBtn.disabled = true;
+      playBtn.textContent = '✅ All Numbers Called';
+      winnerBanner.classList.remove('hidden');
+      playFanfare();
+      burstConfetti(160);
+      setTimeout(()=> burstConfetti(160), 300);
+    } else {
+      playBtn.disabled = false;
+    }
+  }
+
+  // ---------- Leaderboard / Congratulations ----------
+  announceWinnersBtn.addEventListener('click', ()=>{
+    const first = firstPlaceInput.value.trim();
+    const second = secondPlaceInput.value.trim();
+    const third = thirdPlaceInput.value.trim();
+
+    if(!first && !second && !third){
+      firstPlaceInput.focus();
+      return;
+    }
+
+    congratsList.innerHTML = '';
+    const medals = [['🥇','1st Place',first], ['🥈','2nd Place',second], ['🥉','3rd Place',third]];
+    medals.forEach(([medal,label,name])=>{
+      if(!name) return;
+      const row = document.createElement('div');
+      row.className = 'flex items-center justify-center gap-3 text-lg md:text-2xl mb-2';
+      const medalSpan = document.createElement('span');
+      medalSpan.textContent = medal;
+      const labelSpan = document.createElement('span');
+      labelSpan.className = 'font-chalk text-[var(--gold-light)]';
+      labelSpan.textContent = label + ':';
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'font-display font-bold';
+      nameSpan.textContent = name;
+      row.append(medalSpan, labelSpan, nameSpan);
+      congratsList.appendChild(row);
+    });
+
+    congratsModal.classList.remove('hidden');
+    congratsModal.classList.add('flex');
+    playFanfare();
+
+    const cx = canvas.width/2, cy = canvas.height*0.3;
+    burstConfetti(150);
+    fireworkBurst(cx - 160, cy, 60);
+    fireworkBurst(cx + 160, cy, 60);
+    setTimeout(()=> fireworkBurst(cx, cy - 40, 80), 400);
+    setTimeout(()=> burstConfetti(120), 600);
+  });
+
+  closeCongratsBtn.addEventListener('click', ()=>{
+    congratsModal.classList.add('hidden');
+    congratsModal.classList.remove('flex');
+  });
+
+  // initialize default board size preview text
+  selectedTotalLabel.textContent = selectedTotal;
+})();
+</script>
+</body>
+</html>
